@@ -51,6 +51,10 @@ CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
+CREATE POLICY "Service role can insert profiles"
+  ON profiles FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
 -- Recipes policies
 CREATE POLICY "Users can view their own recipes"
   ON recipes FOR SELECT
@@ -79,6 +83,14 @@ BEGIN
   INSERT INTO profiles (id, email)
   VALUES (NEW.id, NEW.email);
   RETURN NEW;
+EXCEPTION
+  WHEN unique_violation THEN
+    -- Profile already exists (e.g. re-signup after email change), skip
+    RETURN NEW;
+  WHEN OTHERS THEN
+    -- Log but don't block signup if profile creation fails
+    RAISE WARNING 'handle_new_user failed for %: %', NEW.id, SQLERRM;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

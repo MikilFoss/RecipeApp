@@ -46,14 +46,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      return { error: { message: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env' } as AuthError }
+    }
     const { error } = await supabase.auth.signUp({
       email,
       password,
     })
+    if (error?.message?.toLowerCase().includes('database error saving new user')) {
+      return { error: { ...error, message: 'Account creation failed — the database may not be set up yet. Please run supabase/schema.sql in your Supabase SQL editor.' } as AuthError }
+    }
     return { error }
   }
 
   const signIn = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      return { error: { message: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env' } as AuthError }
+    }
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
